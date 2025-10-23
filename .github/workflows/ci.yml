@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 env:
   NODE_VERSION: '20'
   REGISTRY: ghcr.io
@@ -134,12 +139,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.24.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
