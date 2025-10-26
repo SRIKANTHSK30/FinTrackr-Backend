@@ -20,7 +20,7 @@ export const handleValidationErrors = (
 
 // User validation schemas
 export const validateRegister = [
-  body('email').isEmail().normalizeEmail(),
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('name').trim().isLength({ min: 1 }).withMessage('Name is required'),
   handleValidationErrors
