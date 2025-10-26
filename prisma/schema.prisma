@@ -1,0 +1,82 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String?
+  name         String
+  googleId     String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  transactions Transaction[]
+  categories   Category[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model Transaction {
+  id          String      @id @default(uuid())
+  userId      String
+  type        TransactionType
+  amount      Decimal     @db.Decimal(10, 2)
+  category    String
+  description String?
+  date        DateTime    @default(now())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model Category {
+  id     String      @id @default(uuid())
+  userId String
+  name   String
+  type   CategoryType
+  color  String      @default("#3B82F6")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@map("categories")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}

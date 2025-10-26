@@ -1,198 +1,328 @@
-# 🧾 FinTrackr Backend
+# FinTrackr Backend API
 
-Backend for **FinTrackr**, a modern finance tracking application built using **Node.js**, **TypeScript**, **Express**, and **Prisma**.  The backend is fully containerized using **Docker** for seamless development and production deployment.
+A comprehensive personal finance tracker backend API built with Node.js, TypeScript, Express, and PostgreSQL.
 
----
+## 🚀 Features
 
-## 📑 Table of Contents
+- **Secure Authentication**: JWT-based authentication with refresh tokens
+- **Transaction Management**: Full CRUD operations for financial transactions
+- **Category Management**: Organize transactions with custom categories
+- **Real-time Analytics**: Dashboard with spending insights and summaries
+- **RESTful API**: Well-documented REST API with Swagger/OpenAPI
+- **Database**: PostgreSQL with Prisma ORM
+- **Caching**: Redis for session management and performance
+- **Security**: Rate limiting, CORS, Helmet, input validation
+- **Testing**: Comprehensive test suite with Jest
+- **CI/CD**: GitHub Actions for automated testing and deployment
+- **Docker**: Containerized application with Docker Compose
 
-- [Prerequisites](#-prerequisites)
-- [Project Structure](#-project-structure)
-- [Environment Variables](#-environment-variables)
-- [Installation & Development](#-installation--development)
-- [Production Setup](#-production-setup)
-- [Database (Prisma)](#-database-prisma)
-- [NPM Scripts](#-npm-scripts)
-- [Quick Start](#-quick-start)
-- [Notes](#-notes)
-- [License](#-license)
+## 🏗️ Architecture
 
----
-
-## ⚙️ Prerequisites
-
-Ensure the following tools are installed on your system:
-
-- **Node.js** (v20 or above)
-- **Docker**
-- **Docker Compose**
-- **Git** *(optional, for cloning the repository)*
-
----
-
-## 🧩 Project Structure
-
-This project follows a **feature-based architecture** to ensure scalability, maintainability, and clear separation of concerns.  Each major folder inside `src/` represents a specific domain or responsibility of the backend.
 ```
-FinTrackr-Backend/
-├── docker-compose.yml # Docker Compose setup for containerized environment
-└── backend/
-├── Dockerfile         # Dockerfile for backend service
-├── package.json       # Project dependencies and scripts
-├── package-lock.json  # Dependency lock file
-├── tsconfig.json      # TypeScript configuration
-├── .env               # Environment variables
-├── .gitignore         # Git ignore file
-│
-├── prisma/            # Database schema and migration configuration
-│ ├── dev.db           # Local development SQLite database (or Postgres URL in .env)
-│ ├── schema.prisma    # Prisma ORM schema definition
-│ └── migrations/      # Database migration history
-│ └── 20251023125814_init/
-│ ├── migration.sql    # SQL migration file
-│ └── migration_lock.toml
-│
-├── src/               # Main source code directory
-│ ├── config/          # Configuration files (e.g., DB, server setup)
-│ ├── controllers/     # Route handlers and business logic entry points
-│ ├── middleware/      # Express middlewares (auth checks, validation, etc.)
-│ ├── models/          # Prisma models or data-layer logic
-│ ├── routes/          # API route definitions
-│ ├── services/        # Core application services / reusable logic
-│ ├── utils/           # Helper and utility functions
-│ ├── tests/           # Test files (unit/integration)
-│ └── server.ts        # Main entry point — initializes and starts Express app
-│
-└── README.md          # Documentation for backend setup
-```
----
-
-## 🔐 Environment Variables
-
-Create a `.env` file inside the `backend/` folder with the following configuration:
-```
-PORT=5000
-DATABASE_URL="postgresql://user:password@localhost:5432/fintrackr"
-JWT_SECRET="yourSecretKey"
+┌─────────────┐         ┌──────────────┐         ┌──────────────┐
+│   Client    │────────▶│   API Layer  │────────▶│   Database   │
+│  (React)    │◀────────│  (Express)   │◀────────│ (PostgreSQL) │
+└─────────────┘         └──────────────┘         └──────────────┘
+                               │
+                               ▼
+                        ┌──────────────┐
+                        │    Redis     │
+                        │   (Cache)    │
+                        └──────────────┘
 ```
 
-> 📝 **Note:**  
-> - Replace `user` and `password` with your actual PostgreSQL credentials.  
-> - Set a strong, unique value for `JWT_SECRET`.  
-> - The database URL should match your local or Docker-based PostgreSQL instance.
+## 📋 Prerequisites
 
----
+- Node.js 20+ LTS
+- PostgreSQL 15+
+- Redis 7+
+- Docker & Docker Compose (optional)
 
-## 🧑‍💻 Installation & Development
+## 🛠️ Installation
 
-   ### 1️⃣ Clone the Repository
+### Local Development
 
-    
-    git clone https://github.com/SRIKANTHSK30/FinTrackr-Backend.git
-    cd FinTrackr-Backend
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/fintrackr-backend.git
+   cd fintrackr-backend
+   ```
 
-   ### 2️⃣ Verify Project Layout
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-    FinTrackr-Backend/backend/
+3. **Set up environment variables**
+   ```bash
+   cp env.example .env
+   ```
+   
+   Update the `.env` file with your configuration:
+   ```env
+   DATABASE_URL="postgresql://username:password@localhost:5432/fintrackr?schema=public"
+   REDIS_URL="redis://localhost:6379"
+   JWT_SECRET="your-super-secret-jwt-key-here"
+   JWT_REFRESH_SECRET="your-super-secret-refresh-key-here"
+   ```
 
-   ### 3️⃣ Start the Backend using Docker Compose
+4. **Set up the database**
+   ```bash
+   # Generate Prisma client
+   npm run db:generate
+   
+   # Run database migrations
+   npm run db:migrate
+   
+   # Seed the database (optional)
+   npm run db:seed
+   ```
 
-    docker compose up --build
----
-## 🚀 Production Setup
+5. **Start the development server**
+   ```bash
+   npm run dev
+   ```
 
-When deploying to a production environment:
+### Docker Development
 
-### 1️⃣ Build the Docker Image
+1. **Start services with Docker Compose**
+   ```bash
+   # Production environment
+   docker-compose up -d
+   
+   # Development environment
+   docker-compose -f docker-compose.dev.yml up -d
+   ```
 
-    docker compose build
+2. **Run database migrations**
+   ```bash
+   docker-compose exec api npx prisma migrate deploy
+   ```
 
-### 2️⃣ Run the Compiled Backend
+3. **Seed the database**
+   ```bash
+   docker-compose exec api npm run db:seed
+   ```
 
-    docker compose run backend npm run start
----
-## 🗄️ Database (Prisma)
+## 📚 API Documentation
 
-FinTrackr Backend uses Prisma ORM for managing the PostgreSQL database.
+Once the server is running, visit:
+- **API Documentation**: http://localhost:3000/api-docs
+- **Health Check**: http://localhost:3000/api/v1/health
 
-   ### 🔧 Generate Prisma Client
+### Authentication Endpoints
 
-     docker compose run backend npm run prisma:generate
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/auth/register` | Register a new user |
+| POST | `/api/v1/auth/login` | Login user |
+| POST | `/api/v1/auth/refresh` | Refresh access token |
+| POST | `/api/v1/auth/logout` | Logout user |
 
-  ### 🔄 Apply Migrations
+### User Endpoints
 
-    docker compose run backend npm run prisma:migrate
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/users/profile` | Get user profile |
+| PUT | `/api/v1/users/profile` | Update user profile |
+| DELETE | `/api/v1/users/account` | Delete user account |
+| GET | `/api/v1/users/dashboard` | Get dashboard data |
 
+### Transaction Endpoints
 
-> ⚠️ Always run migrations before starting the server in a new environment.This ensures your database schema stays up-to-date with your Prisma schema.
----
-## 📜 NPM Scripts
-**Script Description**
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/transactions` | Create transaction |
+| GET | `/api/v1/transactions` | Get transactions (paginated) |
+| GET | `/api/v1/transactions/:id` | Get specific transaction |
+| PUT | `/api/v1/transactions/:id` | Update transaction |
+| DELETE | `/api/v1/transactions/:id` | Delete transaction |
+| GET | `/api/v1/transactions/summary` | Get transaction summary |
+
+### Category Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/categories` | Create category |
+| GET | `/api/v1/categories` | Get categories |
+| GET | `/api/v1/categories/:id` | Get specific category |
+| PUT | `/api/v1/categories/:id` | Update category |
+| DELETE | `/api/v1/categories/:id` | Delete category |
+| GET | `/api/v1/categories/:id/stats` | Get category statistics |
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run linting
+npm run lint
+
+# Fix linting issues
+npm run lint:fix
+
+# Format code
+npm run format
 ```
-npm run dev               #Starts the development server with Nodemon
-npm run build	          #Compiles TypeScript into JavaScript (dist/)
-npm run start	          #Starts the compiled backend for production
-npm run prisma:generate	  #Generates Prisma client files
-npm run prisma:migrate	  #Runs Prisma database migrations
+
+## 🚀 Deployment
+
+### Production Build
+
+```bash
+# Build the application
+npm run build
+
+# Start production server
+npm start
 ```
----
 
-## ⚡ Quick Start
-###  Development Environment
-    docker compose up --build
+### Docker Production
 
+```bash
+# Build and start production containers
+docker-compose up -d
 
-### Access the backend API at :
-    http://localhost:5000
----
+# View logs
+docker-compose logs -f api
+```
 
-## 🌐 Production Environment
+### Environment Variables
 
-    docker compose build
-    docker compose run backend npm run start
----
-## 📝 Notes
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `NODE_ENV` | Environment | `development` |
+| `PORT` | Server port | `3000` |
+| `DATABASE_URL` | PostgreSQL connection string | Required |
+| `REDIS_URL` | Redis connection string | `redis://localhost:6379` |
+| `JWT_SECRET` | JWT signing secret | Required |
+| `JWT_REFRESH_SECRET` | JWT refresh secret | Required |
+| `JWT_EXPIRES_IN` | Access token expiry | `15m` |
+| `JWT_REFRESH_EXPIRES_IN` | Refresh token expiry | `7d` |
+| `CORS_ORIGIN` | Allowed CORS origin | `http://localhost:3000` |
+| `LOG_LEVEL` | Logging level | `info` |
 
-- The .env file must exist and include valid environment variables.
+## 📊 Database Schema
 
-- Docker volumes allow for live development with hot reload.
+### Users Table
+- `id` (UUID, Primary Key)
+- `email` (String, Unique)
+- `passwordHash` (String)
+- `name` (String)
+- `googleId` (String, Optional)
+- `createdAt` (DateTime)
+- `updatedAt` (DateTime)
 
-- Use compiled JavaScript (dist/) in production for best performance.
+### Transactions Table
+- `id` (UUID, Primary Key)
+- `userId` (UUID, Foreign Key)
+- `type` (Enum: CREDIT/DEBIT)
+- `amount` (Decimal)
+- `category` (String)
+- `description` (Text, Optional)
+- `date` (DateTime)
+- `createdAt` (DateTime)
+- `updatedAt` (DateTime)
 
-- Ensure PostgreSQL (or your chosen DB) is running before applying migrations.
+### Categories Table
+- `id` (UUID, Primary Key)
+- `userId` (UUID, Foreign Key)
+- `name` (String)
+- `type` (Enum: INCOME/EXPENSE)
+- `color` (String, Hex Color)
 
-- To connect to the DB outside Docker, ensure your local ports are correctly mapped.
----
-## 📘 Example API Flow
+## 🔒 Security Features
 
-**User Authentication – JWT-based login and signup routes.**
+- **JWT Authentication**: Secure token-based authentication
+- **Password Hashing**: bcrypt for password security
+- **Rate Limiting**: Prevent abuse and DDoS attacks
+- **CORS Protection**: Configurable cross-origin resource sharing
+- **Input Validation**: Zod schema validation
+- **SQL Injection Prevention**: Prisma ORM with parameterized queries
+- **Helmet**: Security headers
+- **Redis Sessions**: Secure session management
 
-**Expense Tracking – CRUD APIs for transactions.**
+## 🛠️ Development
 
-**Analytics – Aggregated financial statistics fetched using Prisma queries.**
+### Project Structure
 
-> (Optional: you can document your routes later here for developers joining the project.)
---- 
-## 📦 Docker Commands Summary
-**Command	Description**
+```
+src/
+├── config/          # Configuration files
+├── controllers/     # Route controllers
+├── middleware/      # Custom middleware
+├── models/          # Database models (Prisma)
+├── routes/          # API routes
+├── services/        # Business logic
+├── utils/           # Utility functions
+└── server.ts        # Application entry point
 
-     docker compose up --build	          #Build and start the containers
-     docker compose down	              #Stop and remove containers
-     docker compose logs -f	              #View live container logs
-     docker exec -it <container_name> sh  #Access container shell
----
-## 🧰 Tech Stack
+prisma/
+├── schema.prisma    # Database schema
+└── seed.ts         # Database seeding
 
-- Node.js — Server runtime
+tests/
+├── setup.ts        # Test configuration
+└── *.test.ts       # Test files
+```
 
-- TypeScript — Type safety and modern JS features
+### Available Scripts
 
-- Express.js — Web framework
+```bash
+# Development
+npm run dev          # Start development server
+npm run build        # Build for production
+npm start           # Start production server
 
-- Prisma — ORM for database interaction
+# Database
+npm run db:generate  # Generate Prisma client
+npm run db:push      # Push schema to database
+npm run db:migrate   # Run database migrations
+npm run db:studio    # Open Prisma Studio
+npm run db:seed      # Seed database
 
-- PostgreSQL — Database
+# Testing
+npm test            # Run tests
+npm run test:watch  # Run tests in watch mode
+npm run test:coverage # Run tests with coverage
 
-- Docker — Containerization
+# Code Quality
+npm run lint        # Run ESLint
+npm run lint:fix    # Fix ESLint issues
+npm run format     # Format code with Prettier
+```
 
-- JWT — Secure authentication
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+If you have any questions or need help, please:
+
+1. Check the [API Documentation](http://localhost:3000/api-docs)
+2. Review the [Issues](https://github.com/your-username/fintrackr-backend/issues)
+3. Create a new issue with detailed information
+
+## 🙏 Acknowledgments
+
+- [Express.js](https://expressjs.com/) - Web framework
+- [Prisma](https://www.prisma.io/) - Database ORM
+- [TypeScript](https://www.typescriptlang.org/) - Type safety
+- [Jest](https://jestjs.io/) - Testing framework
+- [Docker](https://www.docker.com/) - Containerization 
