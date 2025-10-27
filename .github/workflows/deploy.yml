@@ -11,21 +11,50 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  deploy:
-    name: Deploy Application
+  # 🚀 Deploy to Staging (develop branch)
+  deploy-staging:
+    name: Deploy to Staging
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main' }}
-    
+    if: >
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_branch == 'develop' }}
+    environment: staging
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to production
+      - name: Deploy to Staging
         run: |
-          echo "Deploying to production..."
+          echo "🚀 Deploying to STAGING environment..."
+          # Add your staging deployment steps here
+          # For example:
+          # ssh ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} '
+          #   cd /app &&
+          #   git pull origin develop &&
+          #   docker compose -f docker-compose.staging.yml up -d --build
+          # '
+  
+  # 🚀 Deploy to Production (main branch)
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: >
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_branch == 'main' }}
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Production
+        run: |
+          echo "🚀 Deploying to PRODUCTION environment..."
           # Add your production deployment steps here
-          # This could include:
-          # - Updating Kubernetes manifests
-          # - Running database migrations
-          # - Updating load balancer configuration
-          # - Sending deployment notifications
+          # Example:
+          # ssh ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} '
+          #   cd /app &&
+          #   git pull origin main &&
+          #   docker compose -f docker-compose.yml up -d --build
+          # '
