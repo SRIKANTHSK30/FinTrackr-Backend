@@ -1,10 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import prisma from '@/config/database';
 import { hashPassword, comparePassword } from '@/utils/bcrypt';
 import { generateTokenPair, verifyRefreshToken } from '@/utils/jwt';
 import logger from '@/utils/logger';
-import redisClient from '@/config/redis';
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -21,7 +20,7 @@ const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1)
 });
 
-export const register = async (req: Request, res: Response): Promise<void> => {
+export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password, name } = registerSchema.parse(req.body);
 
@@ -59,12 +58,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       email: user.email
     });
 
-    // Store refresh token in Redis
-    await redisClient.setEx(
-      `refresh_token:${user.id}`,
-      7 * 24 * 60 * 60, // 7 days
-      tokens.refreshToken
-    );
+    // Stateless: no refresh token storage
 
     logger.info('User registered successfully', { userId: user.id, email: user.email });
 
@@ -81,11 +75,11 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       });
       return;
     }
-    throw error;
+    next(error);
   }
 };
 
-export const login = async (req: Request, res: Response): Promise<void> => {
+export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password } = loginSchema.parse(req.body);
 
@@ -112,12 +106,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       email: user.email
     });
 
-    // Store refresh token in Redis
-    await redisClient.setEx(
-      `refresh_token:${user.id}`,
-      7 * 24 * 60 * 60, // 7 days
-      tokens.refreshToken
-    );
+    // Stateless: no refresh token storage
 
     logger.info('User logged in successfully', { userId: user.id, email: user.email });
 
@@ -138,11 +127,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       });
       return;
     }
-    throw error;
+    next(error);
   }
 };
 
-export const refreshToken = async (req: Request, res: Response): Promise<void> => {
+export const refreshToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { refreshToken } = refreshTokenSchema.parse(req.body);
 
@@ -154,12 +143,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Check if refresh token exists in Redis
-    const storedToken = await redisClient.get(`refresh_token:${payload.userId}`);
-    if (!storedToken || storedToken !== refreshToken) {
-      res.status(401).json({ error: 'Invalid refresh token' });
-      return;
-    }
+    // Stateless: accept valid refresh token without storage lookup
 
     // Generate new tokens
     const tokens = generateTokenPair({
@@ -167,12 +151,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       email: payload.email
     });
 
-    // Update refresh token in Redis
-    await redisClient.setEx(
-      `refresh_token:${payload.userId}`,
-      7 * 24 * 60 * 60, // 7 days
-      tokens.refreshToken
-    );
+    // Stateless: no refresh token storage
 
     res.json({
       message: 'Token refreshed successfully',
@@ -186,11 +165,11 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       });
       return;
     }
-    res.status(401).json({ error: 'Invalid refresh token' });
+    next(error);
   }
 };
 
-export const logout = async (req: Request, res: Response): Promise<void> => {
+export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -198,16 +177,12 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const token = authHeader.substring(7);
-    const payload = verifyRefreshToken(token);
+    // Stateless logout: simply acknowledge; tokens expire naturally
 
-    // Remove refresh token from Redis
-    await redisClient.del(`refresh_token:${payload.userId}`);
-
-    logger.info('User logged out successfully', { userId: payload.userId });
+    logger.info('User logged out successfully');
 
     res.json({ message: 'Logout successful' });
   } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
+    next(error);
   }
 };
