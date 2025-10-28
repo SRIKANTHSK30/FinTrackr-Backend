@@ -4,12 +4,14 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
+import session from 'express-session';
 import { env } from '@/config/env';
 import { generalLimiter } from '@/middleware/rateLimiter';
 import { errorHandler, notFoundHandler } from '@/middleware/errorHandler';
 import { setupSwagger } from '@/middleware/swagger';
 import routes from '@/routes';
 import logger from '@/utils/logger';
+import passport from '@/config/passport';
 
 const app = express();
 
@@ -51,6 +53,22 @@ app.use(morgan('combined', {
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Session middleware (required for Passport)
+app.use(session({
+  secret: env.JWT_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Rate limiting
 app.use(generalLimiter);

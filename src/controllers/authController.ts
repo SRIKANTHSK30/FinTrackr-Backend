@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import passport from 'passport';
 import prisma from '@/config/database';
 import { hashPassword, comparePassword } from '@/utils/bcrypt';
 import { generateTokenPair, verifyRefreshToken } from '@/utils/jwt';
@@ -58,7 +59,17 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       email: user.email
     });
 
-    // Stateless: no refresh token storage
+    // Store refresh token in database
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        token: tokens.refreshToken,
+        expiresAt
+      }
+    });
 
     logger.info('User registered successfully', { userId: user.id, email: user.email });
 
@@ -106,7 +117,17 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       email: user.email
     });
 
-    // Stateless: no refresh token storage
+    // Store refresh token in database
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        token: tokens.refreshToken,
+        expiresAt
+      }
+    });
 
     logger.info('User logged in successfully', { userId: user.id, email: user.email });
 
@@ -143,7 +164,21 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
       return;
     }
 
-    // Stateless: accept valid refresh token without storage lookup
+    // Check if refresh token exists in database
+    const storedToken = await prisma.refreshToken.findFirst({
+      where: {
+        userId: payload.userId,
+        token: refreshToken,
+        expiresAt: {
+          gt: new Date() // Token not expired
+        }
+      }
+    });
+
+    if (!storedToken) {
+      res.status(401).json({ error: 'Invalid refresh token' });
+      return;
+    }
 
     // Generate new tokens
     const tokens = generateTokenPair({
@@ -151,7 +186,22 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
       email: payload.email
     });
 
-    // Stateless: no refresh token storage
+    // Update refresh token in database
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+
+    // Delete old refresh token and create new one
+    await prisma.refreshToken.deleteMany({
+      where: { userId: payload.userId }
+    });
+
+    await prisma.refreshToken.create({
+      data: {
+        userId: payload.userId,
+        token: tokens.refreshToken,
+        expiresAt
+      }
+    });
 
     res.json({
       message: 'Token refreshed successfully',
@@ -177,7 +227,13 @@ export const logout = async (req: Request, res: Response, next: NextFunction): P
       return;
     }
 
-    // Stateless logout: simply acknowledge; tokens expire naturally
+    const token = authHeader.substring(7);
+    const payload = verifyRefreshToken(token);
+
+    // Remove refresh token from database
+    await prisma.refreshToken.deleteMany({
+      where: { userId: payload.userId }
+    });
 
     logger.info('User logged out successfully');
 
@@ -185,4 +241,60 @@ export const logout = async (req: Request, res: Response, next: NextFunction): P
   } catch (error) {
     next(error);
   }
+};
+
+// Google OAuth methods
+export const googleAuth = passport.authenticate('google', {
+  scope: ['profile', 'email']
+});
+
+export const googleCallback = (req: Request, res: Response): void => {
+  passport.authenticate('google', async (err: any, user: any) => {
+    if (err) {
+      logger.error('Google OAuth error', { error: err });
+      res.status(500).json({ error: 'Authentication failed' });
+      return;
+    }
+
+    if (!user) {
+      res.status(401).json({ error: 'Authentication failed' });
+      return;
+    }
+
+    try {
+      // Generate tokens for the authenticated user
+      const tokens = generateTokenPair({
+        userId: user.id,
+        email: user.email
+      });
+
+      // Store refresh token in database
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+
+      await prisma.refreshToken.create({
+        data: {
+          userId: user.id,
+          token: tokens.refreshToken,
+          expiresAt
+        }
+      });
+
+      logger.info('User authenticated via Google OAuth', { 
+        userId: user.id, 
+        email: user.email,
+        googleId: user.googleId 
+      });
+
+      // For development, redirect to frontend with tokens
+      // In production, you might want to redirect to a success page
+      const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:3000';
+      const redirectUrl = `${frontendUrl}/auth/callback?access_token=${tokens.accessToken}&refresh_token=${tokens.refreshToken}`;
+      
+      res.redirect(redirectUrl);
+    } catch (tokenError) {
+      logger.error('Token generation error', { error: tokenError, userId: user.id });
+      res.status(500).json({ error: 'Token generation failed' });
+    }
+  })(req, res);
 };
