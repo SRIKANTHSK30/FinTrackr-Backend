@@ -31,7 +31,7 @@ const getTransactionsSchema = z.object({
 
 export const createTransaction = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.authUser!.id;
     const data = createTransactionSchema.parse(req.body);
 
     const transaction = await prisma.transaction.create({
@@ -77,7 +77,7 @@ export const createTransaction = async (req: AuthenticatedRequest, res: Response
 
 export const getTransactions = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.authUser!.id;
     const { page, limit, type, category, startDate, endDate } = getTransactionsSchema.parse(req.query);
 
     const skip = (page - 1) * limit;
@@ -140,7 +140,7 @@ export const getTransactions = async (req: AuthenticatedRequest, res: Response):
 
 export const getTransaction = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.authUser!.id;
     const id = req.params['id']!;
 
     const transaction = await prisma.transaction.findFirst({
@@ -173,7 +173,7 @@ export const getTransaction = async (req: AuthenticatedRequest, res: Response): 
 
 export const updateTransaction = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.authUser!.id;
     const id = req.params['id']!;
     const data = updateTransactionSchema.parse(req.body);
 
@@ -230,7 +230,7 @@ export const updateTransaction = async (req: AuthenticatedRequest, res: Response
 
 export const deleteTransaction = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.authUser!.id;
     const id = req.params['id']!;
 
     // Check if transaction exists and belongs to user
@@ -260,7 +260,7 @@ export const deleteTransaction = async (req: AuthenticatedRequest, res: Response
 
 export const getTransactionSummary = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.authUser!.id;
     const { startDate, endDate } = req.query;
 
     const where = {

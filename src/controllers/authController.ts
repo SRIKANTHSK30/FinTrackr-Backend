@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import passport from 'passport';
 import prisma from '@/config/database';
 import { hashPassword, comparePassword } from '@/utils/bcrypt';
 import { generateTokenPair, verifyRefreshToken } from '@/utils/jwt';
 import logger from '@/utils/logger';
-import redisClient from '@/config/redis';
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -59,12 +59,17 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       email: user.email
     });
 
-    // Store refresh token in Redis
-    await redisClient.setEx(
-      `refresh_token:${user.id}`,
-      7 * 24 * 60 * 60, // 7 days
-      tokens.refreshToken
-    );
+    // Store refresh token in database
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        token: tokens.refreshToken,
+        expiresAt
+      }
+    });
 
     logger.info('User registered successfully', { userId: user.id, email: user.email });
 
@@ -112,12 +117,17 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       email: user.email
     });
 
-    // Store refresh token in Redis
-    await redisClient.setEx(
-      `refresh_token:${user.id}`,
-      7 * 24 * 60 * 60, // 7 days
-      tokens.refreshToken
-    );
+    // Store refresh token in database
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        token: tokens.refreshToken,
+        expiresAt
+      }
+    });
 
     logger.info('User logged in successfully', { userId: user.id, email: user.email });
 
@@ -154,9 +164,18 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Check if refresh token exists in Redis
-    const storedToken = await redisClient.get(`refresh_token:${payload.userId}`);
-    if (!storedToken || storedToken !== refreshToken) {
+    // Check if refresh token exists in database
+    const storedToken = await prisma.refreshToken.findFirst({
+      where: {
+        userId: payload.userId,
+        token: refreshToken,
+        expiresAt: {
+          gt: new Date() // Token not expired
+        }
+      }
+    });
+
+    if (!storedToken) {
       res.status(401).json({ error: 'Invalid refresh token' });
       return;
     }
@@ -167,12 +186,22 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       email: payload.email
     });
 
-    // Update refresh token in Redis
-    await redisClient.setEx(
-      `refresh_token:${payload.userId}`,
-      7 * 24 * 60 * 60, // 7 days
-      tokens.refreshToken
-    );
+    // Update refresh token in database
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+
+    // Delete old refresh token and create new one
+    await prisma.refreshToken.deleteMany({
+      where: { userId: payload.userId }
+    });
+
+    await prisma.refreshToken.create({
+      data: {
+        userId: payload.userId,
+        token: tokens.refreshToken,
+        expiresAt
+      }
+    });
 
     res.json({
       message: 'Token refreshed successfully',
@@ -201,8 +230,10 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     const token = authHeader.substring(7);
     const payload = verifyRefreshToken(token);
 
-    // Remove refresh token from Redis
-    await redisClient.del(`refresh_token:${payload.userId}`);
+    // Remove refresh token from database
+    await prisma.refreshToken.deleteMany({
+      where: { userId: payload.userId }
+    });
 
     logger.info('User logged out successfully', { userId: payload.userId });
 
@@ -210,4 +241,60 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     res.status(401).json({ error: 'Invalid token' });
   }
+};
+
+// Google OAuth methods
+export const googleAuth = passport.authenticate('google', {
+  scope: ['profile', 'email']
+});
+
+export const googleCallback = (req: Request, res: Response): void => {
+  passport.authenticate('google', async (err: any, user: any) => {
+    if (err) {
+      logger.error('Google OAuth error', { error: err });
+      res.status(500).json({ error: 'Authentication failed' });
+      return;
+    }
+
+    if (!user) {
+      res.status(401).json({ error: 'Authentication failed' });
+      return;
+    }
+
+    try {
+      // Generate tokens for the authenticated user
+      const tokens = generateTokenPair({
+        userId: user.id,
+        email: user.email
+      });
+
+      // Store refresh token in database
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+
+      await prisma.refreshToken.create({
+        data: {
+          userId: user.id,
+          token: tokens.refreshToken,
+          expiresAt
+        }
+      });
+
+      logger.info('User authenticated via Google OAuth', { 
+        userId: user.id, 
+        email: user.email,
+        googleId: user.googleId 
+      });
+
+      // For development, redirect to frontend with tokens
+      // In production, you might want to redirect to a success page
+      const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:3000';
+      const redirectUrl = `${frontendUrl}/auth/callback?access_token=${tokens.accessToken}&refresh_token=${tokens.refreshToken}`;
+      
+      res.redirect(redirectUrl);
+    } catch (tokenError) {
+      logger.error('Token generation error', { error: tokenError, userId: user.id });
+      res.status(500).json({ error: 'Token generation failed' });
+    }
+  })(req, res);
 };

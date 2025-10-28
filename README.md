@@ -10,7 +10,7 @@ A comprehensive personal finance tracker backend API built with Node.js, TypeScr
 - **Real-time Analytics**: Dashboard with spending insights and summaries
 - **RESTful API**: Well-documented REST API with Swagger/OpenAPI
 - **Database**: PostgreSQL with Prisma ORM
-- **Caching**: Redis for session management and performance
+- **Caching**: Database-based session management
 - **Security**: Rate limiting, CORS, Helmet, input validation
 - **Testing**: Comprehensive test suite with Jest
 - **CI/CD**: GitHub Actions for automated testing and deployment
@@ -26,7 +26,6 @@ A comprehensive personal finance tracker backend API built with Node.js, TypeScr
                                │
                                ▼
                         ┌──────────────┐
-                        │    Redis     │
                         │   (Cache)    │
                         └──────────────┘
 ```
@@ -35,7 +34,6 @@ A comprehensive personal finance tracker backend API built with Node.js, TypeScr
 
 - Node.js 20+ LTS
 - PostgreSQL 15+
-- Redis 7+
 - Docker & Docker Compose (optional)
 
 ## 🛠️ Installation
@@ -61,7 +59,6 @@ A comprehensive personal finance tracker backend API built with Node.js, TypeScr
    Update the `.env` file with your configuration:
    ```env
    DATABASE_URL="postgresql://username:password@localhost:5432/fintrackr?schema=public"
-   REDIS_URL="redis://localhost:6379"
    JWT_SECRET="your-super-secret-jwt-key-here"
    JWT_REFRESH_SECRET="your-super-secret-refresh-key-here"
    ```
@@ -201,7 +198,6 @@ docker-compose logs -f api
 | `NODE_ENV` | Environment | `development` |
 | `PORT` | Server port | `3000` |
 | `DATABASE_URL` | PostgreSQL connection string | Required |
-| `REDIS_URL` | Redis connection string | `redis://localhost:6379` |
 | `JWT_SECRET` | JWT signing secret | Required |
 | `JWT_REFRESH_SECRET` | JWT refresh secret | Required |
 | `JWT_EXPIRES_IN` | Access token expiry | `15m` |
@@ -247,7 +243,7 @@ docker-compose logs -f api
 - **Input Validation**: Zod schema validation
 - **SQL Injection Prevention**: Prisma ORM with parameterized queries
 - **Helmet**: Security headers
-- **Redis Sessions**: Secure session management
+- **Database Sessions**: Secure session management with PostgreSQL
 
 ## 🛠️ Development
 

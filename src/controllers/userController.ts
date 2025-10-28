@@ -6,7 +6,7 @@ import logger from '@/utils/logger';
 export const getProfile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const user = await prisma.user.findUnique({
-      where: { id: req.user!.id },
+      where: { id: req.authUser!.id },
       select: {
         id: true,
         email: true,
@@ -32,7 +32,7 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response): P
     const { name, email } = req.body;
 
     // Check if email is being changed and if it's already taken
-    if (email && email !== req.user!.email) {
+    if (email && email !== req.authUser!.email) {
       const existingUser = await prisma.user.findUnique({
         where: { email }
       });
@@ -44,7 +44,7 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response): P
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: req.user!.id },
+      where: { id: req.authUser!.id },
       data: {
         ...(name && { name }),
         ...(email && { email })
@@ -57,7 +57,7 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response): P
       }
     });
 
-    logger.info('User profile updated', { userId: req.user!.id });
+    logger.info('User profile updated', { userId: req.authUser!.id });
 
     res.json({
       message: 'Profile updated successfully',
@@ -72,10 +72,10 @@ export const deleteAccount = async (req: AuthenticatedRequest, res: Response): P
   try {
     // Delete user (cascade will handle related records)
     await prisma.user.delete({
-      where: { id: req.user!.id }
+      where: { id: req.authUser!.id }
     });
 
-    logger.info('User account deleted', { userId: req.user!.id });
+    logger.info('User account deleted', { userId: req.authUser!.id });
 
     res.json({ message: 'Account deleted successfully' });
   } catch (error) {
@@ -85,7 +85,7 @@ export const deleteAccount = async (req: AuthenticatedRequest, res: Response): P
 
 export const getDashboard = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.authUser!.id;
 
     // Get recent transactions
     const recentTransactions = await prisma.transaction.findMany({

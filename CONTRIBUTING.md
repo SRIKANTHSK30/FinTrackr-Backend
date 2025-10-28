@@ -8,7 +8,6 @@ Thank you for your interest in contributing to FinTrackr! This document provides
 
 - Node.js 20+ LTS
 - PostgreSQL 15+
-- Redis 7+
 - Git
 
 ### Development Setup
