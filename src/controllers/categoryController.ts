@@ -18,7 +18,7 @@ const updateCategorySchema = z.object({
 
 export const createCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.authUser!.id;
     const data = createCategorySchema.parse(req.body);
 
     // Check if category already exists for this user
@@ -74,7 +74,7 @@ export const createCategory = async (req: AuthenticatedRequest, res: Response): 
 
 export const getCategories = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.authUser!.id;
     const { type } = req.query;
 
     const where = {
@@ -104,7 +104,7 @@ export const getCategories = async (req: AuthenticatedRequest, res: Response): P
 
 export const getCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.authUser!.id;
     const id = req.params['id']!;
 
     const category = await prisma.category.findFirst({
@@ -133,7 +133,7 @@ export const getCategory = async (req: AuthenticatedRequest, res: Response): Pro
 
 export const updateCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.authUser!.id;
     const id = req.params['id']!;
     const data = updateCategorySchema.parse(req.body);
 
@@ -203,7 +203,7 @@ export const updateCategory = async (req: AuthenticatedRequest, res: Response): 
 
 export const deleteCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.authUser!.id;
     const id = req.params['id']!;
 
     // Check if category exists and belongs to user
@@ -250,7 +250,7 @@ export const deleteCategory = async (req: AuthenticatedRequest, res: Response): 
 
 export const getCategoryStats = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.authUser!.id;
     const id = req.params['id']!;
 
     const category = await prisma.category.findFirst({

@@ -3,8 +3,9 @@ import { verifyAccessToken } from '@/utils/jwt';
 import prisma from '@/config/database';
 import logger from '@/utils/logger';
 
+// Custom interface for authenticated requests
 export interface AuthenticatedRequest extends Request {
-  user?: {
+  authUser?: {
     id: string;
     email: string;
   };
@@ -42,7 +43,7 @@ export const authenticate = async (
       return;
     }
 
-    req.user = user;
+    req.authUser = user;
     next();
   } catch (error) {
     logger.error('Authentication error:', error);

@@ -18,7 +18,6 @@ services:
     networks:
       - fintrackr-network
 
-
   # FinTrackr Backend API
   api:
     build:
