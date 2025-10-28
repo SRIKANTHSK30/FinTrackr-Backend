@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import passport from 'passport';
 import prisma from '@/config/database';
@@ -21,7 +21,7 @@ const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1)
 });
 
-export const register = async (req: Request, res: Response): Promise<void> => {
+export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password, name } = registerSchema.parse(req.body);
 
@@ -86,11 +86,11 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       });
       return;
     }
-    throw error;
+    next(error);
   }
 };
 
-export const login = async (req: Request, res: Response): Promise<void> => {
+export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password } = loginSchema.parse(req.body);
 
@@ -148,11 +148,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       });
       return;
     }
-    throw error;
+    next(error);
   }
 };
 
-export const refreshToken = async (req: Request, res: Response): Promise<void> => {
+export const refreshToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { refreshToken } = refreshTokenSchema.parse(req.body);
 
@@ -215,11 +215,11 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       });
       return;
     }
-    res.status(401).json({ error: 'Invalid refresh token' });
+    next(error);
   }
 };
 
-export const logout = async (req: Request, res: Response): Promise<void> => {
+export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -235,11 +235,11 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
       where: { userId: payload.userId }
     });
 
-    logger.info('User logged out successfully', { userId: payload.userId });
+    logger.info('User logged out successfully');
 
     res.json({ message: 'Logout successful' });
   } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
+    next(error);
   }
 };
 
