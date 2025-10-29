@@ -8,7 +8,10 @@ export interface AppError extends Error {
   isOperational?: boolean;
 }
 
-export const createError = (message: string, statusCode: number = 500): AppError => {
+export const createError = (
+  message: string,
+  statusCode: number = 500
+): AppError => {
   const error: AppError = new Error(message);
   error.statusCode = statusCode;
   error.isOperational = true;
@@ -16,17 +19,26 @@ export const createError = (message: string, statusCode: number = 500): AppError
 };
 
 export const errorHandler = (
-  error: AppError,
+  err: unknown,
   req: Request,
   res: Response,
   _next: NextFunction
 ): void => {
-  let statusCode = error.statusCode || 500;
-  let message = error.message || 'Internal Server Error';
+  let statusCode = 500;
+  let message = 'Internal Server Error';
+  let stack: string | undefined;
 
-  // Handle Prisma errors
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    switch (error.code) {
+  // 🔹 Handle custom AppError
+  if (err && typeof err === 'object' && 'message' in err) {
+    const error = err as AppError;
+    statusCode = error.statusCode || statusCode;
+    message = error.message || message;
+    stack = error.stack;
+  }
+
+  // 🔹 Handle Prisma known request errors
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    switch (err.code) {
       case 'P2002':
         statusCode = 409;
         message = 'A record with this information already exists';
@@ -42,36 +54,37 @@ export const errorHandler = (
       default:
         statusCode = 400;
         message = 'Database operation failed';
+        break;
     }
   }
 
-  // Handle Prisma validation errors
-  if (error instanceof Prisma.PrismaClientValidationError) {
+  // 🔹 Handle Prisma validation errors
+  if (err instanceof Prisma.PrismaClientValidationError) {
     statusCode = 400;
     message = 'Invalid data provided';
   }
 
-  // Log error
-  logger.error('Error occurred:', {
-    error: error.message,
-    stack: error.stack,
+  // 🔹 Log the error cleanly
+  logger.error('Error occurred', {
+    message,
     statusCode,
-    url: req.url,
+    stack,
+    path: req.originalUrl,
     method: req.method,
     ip: req.ip,
-    userAgent: req.get('User-Agent')
+    userAgent: req.get('User-Agent'),
   });
 
-  // Send error response
+  // 🔹 Send safe error response
   res.status(statusCode).json({
     error: message,
-    ...(env.NODE_ENV === 'development' && { stack: error.stack })
+    ...(env.NODE_ENV === 'development' && { stack }),
   });
 };
 
 export const notFoundHandler = (req: Request, res: Response): void => {
   res.status(404).json({
     error: 'Route not found',
-    path: req.originalUrl
+    path: req.originalUrl,
   });
 };

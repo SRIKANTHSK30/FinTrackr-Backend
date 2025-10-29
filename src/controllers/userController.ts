@@ -1,9 +1,13 @@
 import { Response } from 'express';
+import { Transaction } from '@prisma/client';
 import prisma from '@/config/database';
 import { AuthenticatedRequest } from '@/middleware/auth';
 import logger from '@/utils/logger';
 
-export const getProfile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+export const getProfile = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.authUser!.id },
@@ -12,8 +16,8 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response): Prom
         email: true,
         name: true,
         createdAt: true,
-        updatedAt: true
-      }
+        updatedAt: true,
+      },
     });
 
     if (!user) {
@@ -27,15 +31,16 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response): Prom
   }
 };
 
-export const updateProfile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+export const updateProfile = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
   try {
     const { name, email } = req.body;
 
     // Check if email is being changed and if it's already taken
     if (email && email !== req.authUser!.email) {
-      const existingUser = await prisma.user.findUnique({
-        where: { email }
-      });
+      const existingUser = await prisma.user.findUnique({ where: { email } });
 
       if (existingUser) {
         res.status(409).json({ error: 'Email already in use' });
@@ -47,32 +52,34 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response): P
       where: { id: req.authUser!.id },
       data: {
         ...(name && { name }),
-        ...(email && { email })
+        ...(email && { email }),
       },
       select: {
         id: true,
         email: true,
         name: true,
-        updatedAt: true
-      }
+        updatedAt: true,
+      },
     });
 
     logger.info('User profile updated', { userId: req.authUser!.id });
 
     res.json({
       message: 'Profile updated successfully',
-      user: updatedUser
+      user: updatedUser,
     });
   } catch (error) {
     throw error;
   }
 };
 
-export const deleteAccount = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+export const deleteAccount = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
   try {
-    // Delete user (cascade will handle related records)
     await prisma.user.delete({
-      where: { id: req.authUser!.id }
+      where: { id: req.authUser!.id },
     });
 
     logger.info('User account deleted', { userId: req.authUser!.id });
@@ -83,11 +90,14 @@ export const deleteAccount = async (req: AuthenticatedRequest, res: Response): P
   }
 };
 
-export const getDashboard = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+export const getDashboard = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
   try {
     const userId = req.authUser!.id;
 
-    // Get recent transactions
+    // Recent transactions
     const recentTransactions = await prisma.transaction.findMany({
       where: { userId },
       orderBy: { date: 'desc' },
@@ -98,38 +108,41 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
         amount: true,
         category: true,
         description: true,
-        date: true
-      }
+        date: true,
+      },
     });
 
-    // Get balance summary
-    const transactions = await prisma.transaction.findMany({
-      where: { userId },
-      select: {
-        type: true,
-        amount: true
-      }
-    });
+    // All transactions for summary
+    const transactions: Pick<Transaction, 'type' | 'amount'>[] =
+      await prisma.transaction.findMany({
+        where: { userId },
+        select: {
+          type: true,
+          amount: true,
+        },
+      });
 
     const totalIncome = transactions
       .filter(t => t.type === 'CREDIT')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
+      .map(t => Number(t.amount))
+      .reduce((sum, amount) => sum + amount, 0);
 
     const totalExpenses = transactions
-      .filter(t => t.type === 'DEBIT')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
+  .filter(t => t.type === 'DEBIT')
+  .map(t => Number(t.amount))
+  .reduce((sum, amount) => sum + amount, 0);
 
     const balance = totalIncome - totalExpenses;
 
-    // Get category breakdown
+    // Category breakdown
     const categoryBreakdown = await prisma.transaction.groupBy({
       by: ['category', 'type'],
       where: { userId },
       _sum: { amount: true },
-      _count: { id: true }
+      _count: { id: true },
     });
 
-    // Get monthly spending (last 6 months)
+    // Monthly spending (last 6 months)
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
@@ -138,10 +151,10 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
       where: {
         userId,
         type: 'DEBIT',
-        date: { gte: sixMonthsAgo }
+        date: { gte: sixMonthsAgo },
       },
       _sum: { amount: true },
-      orderBy: { date: 'asc' }
+      orderBy: { date: 'asc' },
     });
 
     res.json({
@@ -150,7 +163,7 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
       totalExpenses,
       recentTransactions,
       categoryBreakdown,
-      monthlySpending
+      monthlySpending,
     });
   } catch (error) {
     throw error;
