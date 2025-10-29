@@ -10,6 +10,13 @@ import {
 import { authenticate } from '@/middleware/auth';
 import { validateCategory } from '@/middleware/validation';
 
+/**
+ * @swagger
+ * tags:
+ *   name: Categories
+ *   description: Category management operations for income and expense categorization
+ */
+
 const router = Router();
 
 // All routes require authentication

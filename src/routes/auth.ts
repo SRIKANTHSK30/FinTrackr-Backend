@@ -10,6 +10,13 @@ import {
 import { validateRegister, validateLogin } from '@/middleware/validation';
 import { authLimiter } from '@/middleware/rateLimiter';
 
+/**
+ * @swagger
+ * tags:
+ *   name: Authentication
+ *   description: User authentication and authorization operations
+ */
+
 const router = Router();
 
 // Public routes

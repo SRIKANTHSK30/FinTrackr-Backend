@@ -74,6 +74,14 @@ const options = {
             error: { type: 'string' },
             details: { type: 'array', items: { type: 'object' } }
           }
+        },
+        HealthCheck: {
+          type: 'object',
+          properties: {
+            status: { type: 'string' },
+            timestamp: { type: 'string', format: 'date-time' },
+            uptime: { type: 'number' }
+          }
         }
       }
     },
