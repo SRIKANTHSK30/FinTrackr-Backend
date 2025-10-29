@@ -27,24 +27,21 @@
     "allowUnreachableCode": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "baseUrl": "./src",
+
+    // 🔧 FIX STARTS HERE
+    "baseUrl": "./",
     "paths": {
-      "@/*": ["*"],
-      "@/controllers/*": ["controllers/*"],
-      "@/middleware/*": ["middleware/*"],
-      "@/models/*": ["models/*"],
-      "@/routes/*": ["routes/*"],
-      "@/services/*": ["services/*"],
-      "@/utils/*": ["utils/*"],
-      "@/config/*": ["config/*"]
+      "@/*": ["src/*"],
+      "@/controllers/*": ["src/controllers/*"],
+      "@/middleware/*": ["src/middleware/*"],
+      "@/models/*": ["src/models/*"],
+      "@/routes/*": ["src/routes/*"],
+      "@/services/*": ["src/services/*"],
+      "@/utils/*": ["src/utils/*"],
+      "@/config/*": ["src/config/*"]
     }
+    // 🔧 FIX ENDS HERE
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "tests"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests"]
 }
