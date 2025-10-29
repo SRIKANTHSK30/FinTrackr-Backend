@@ -1,31 +1,27 @@
-# builder: install dev deps and build
+# Use Node.js image
 FROM node:20-alpine AS builder
+
 WORKDIR /app
 
-# copy only package files for layer caching
+# Copy package files first for dependency caching
 COPY package*.json ./
 
-# install all deps but don't run lifecycle scripts (prevents postinstall tsc running before sources exist)
 RUN npm ci --ignore-scripts
 
-# explicitly generate Prisma client before build
+# 👇 Copy Prisma schema before generating
+COPY prisma ./prisma
+
+# Generate Prisma client
 RUN npx prisma generate
 
-# now copy source and run the build
+# 👇 Now copy the rest of your source files
 COPY . .
+
+# Build your app if needed
 RUN npm run build
 
-# runtime image: only production deps, ignore scripts (build already done)
+# Final image
 FROM node:20-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production
-
-COPY package*.json ./
-RUN npm ci --only=production --ignore-scripts
-
-# copy built output and any runtime assets
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package.json ./package.json
-
-EXPOSE 3000
-CMD ["node", "dist/index.js"]
+COPY --from=builder /app ./
+CMD ["npm", "start"]
