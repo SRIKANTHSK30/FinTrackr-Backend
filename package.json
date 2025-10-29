@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
-    "start": "node -r tsconfig-paths/register dist/server.js",
+    "start": "node --enable-source-maps dist/server.js",
     "dev": "nodemon src/server.ts",
     "prisma:generate": "prisma generate",
     "postinstall": "npm run build",
@@ -46,6 +46,7 @@
     "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "module-alias": "^2.2.3",
     "morgan": "^1.10.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
@@ -82,5 +83,15 @@
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
-  }
+  },
+  "_moduleAliases": {
+  "@": "dist",
+  "@/controllers": "dist/controllers",
+  "@/middleware": "dist/middleware",
+  "@/models": "dist/models",
+  "@/routes": "dist/routes",
+  "@/services": "dist/services",
+  "@/utils": "dist/utils",
+  "@/config": "dist/config"
+}
 }

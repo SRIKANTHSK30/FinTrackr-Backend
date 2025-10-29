@@ -1,3 +1,4 @@
+import 'module-alias/register';
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -12,7 +13,6 @@ import { setupSwagger } from '@/middleware/swagger';
 import routes from '@/routes';
 import logger from '@/utils/logger';
 import passport from '@/config/passport';
-
 const app = express();
 
 // Trust proxy for rate limiting and IP detection

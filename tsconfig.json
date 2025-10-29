@@ -29,7 +29,7 @@
     "emitDecoratorMetadata": true,
 
     // ✅ Correct paths (no "src/" prefix)
-    "baseUrl": "src",
+    "baseUrl": "./src",
     "paths": {
       "@/*": ["*"],
       "@/controllers/*": ["controllers/*"],
