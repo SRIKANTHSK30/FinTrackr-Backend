@@ -28,19 +28,18 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
 
-    // 🔧 FIX STARTS HERE
-    "baseUrl": "./",
+    // ✅ Correct paths (no "src/" prefix)
+    "baseUrl": "src",
     "paths": {
-      "@/*": ["src/*"],
-      "@/controllers/*": ["src/controllers/*"],
-      "@/middleware/*": ["src/middleware/*"],
-      "@/models/*": ["src/models/*"],
-      "@/routes/*": ["src/routes/*"],
-      "@/services/*": ["src/services/*"],
-      "@/utils/*": ["src/utils/*"],
-      "@/config/*": ["src/config/*"]
+      "@/*": ["*"],
+      "@/controllers/*": ["controllers/*"],
+      "@/middleware/*": ["middleware/*"],
+      "@/models/*": ["models/*"],
+      "@/routes/*": ["routes/*"],
+      "@/services/*": ["services/*"],
+      "@/utils/*": ["utils/*"],
+      "@/config/*": ["config/*"]
     }
-    // 🔧 FIX ENDS HERE
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
