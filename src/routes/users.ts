@@ -8,6 +8,13 @@ import {
 import { authenticate } from '@/middleware/auth';
 import { strictLimiter } from '@/middleware/rateLimiter';
 
+/**
+ * @swagger
+ * tags:
+ *   name: Users
+ *   description: User management and profile operations
+ */
+
 const router = Router();
 
 // All routes require authentication

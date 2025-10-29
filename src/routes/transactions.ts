@@ -10,6 +10,13 @@ import {
 import { authenticate } from '@/middleware/auth';
 import { validateTransaction } from '@/middleware/validation';
 
+/**
+ * @swagger
+ * tags:
+ *   name: Transactions
+ *   description: Transaction management operations for income and expense tracking
+ */
+
 const router = Router();
 
 // All routes require authentication

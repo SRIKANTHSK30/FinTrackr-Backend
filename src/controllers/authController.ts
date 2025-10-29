@@ -6,6 +6,100 @@ import { hashPassword, comparePassword } from '@/utils/bcrypt';
 import { generateTokenPair, verifyRefreshToken } from '@/utils/jwt';
 import logger from '@/utils/logger';
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     RegisterRequest:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *         - name
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: User's email address
+ *           example: "user@example.com"
+ *         password:
+ *           type: string
+ *           minLength: 8
+ *           description: User's password (minimum 8 characters)
+ *           example: "password123"
+ *         name:
+ *           type: string
+ *           minLength: 1
+ *           description: User's full name
+ *           example: "John Doe"
+ *     
+ *     LoginRequest:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: User's email address
+ *           example: "user@example.com"
+ *         password:
+ *           type: string
+ *           description: User's password
+ *           example: "password123"
+ *     
+ *     RefreshTokenRequest:
+ *       type: object
+ *       required:
+ *         - refreshToken
+ *       properties:
+ *         refreshToken:
+ *           type: string
+ *           description: Valid refresh token
+ *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *     
+ *     AuthResponse:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *           description: Success message
+ *         user:
+ *           type: object
+ *           properties:
+ *             id:
+ *               type: string
+ *               format: uuid
+ *             email:
+ *               type: string
+ *               format: email
+ *             name:
+ *               type: string
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *         accessToken:
+ *           type: string
+ *           description: JWT access token
+ *         refreshToken:
+ *           type: string
+ *           description: JWT refresh token
+ *     
+ *     TokenResponse:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *           description: Success message
+ *         accessToken:
+ *           type: string
+ *           description: New JWT access token
+ *         refreshToken:
+ *           type: string
+ *           description: New JWT refresh token
+ */
+
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -21,6 +115,73 @@ const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1)
 });
 
+/**
+ * @swagger
+ * /api/v1/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     description: Create a new user account with email, password, and name
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RegisterRequest'
+ *           example:
+ *             email: "user@example.com"
+ *             password: "password123"
+ *             name: "John Doe"
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *             example:
+ *               message: "User registered successfully"
+ *               user:
+ *                 id: "123e4567-e89b-12d3-a456-426614174000"
+ *                 email: "user@example.com"
+ *                 name: "John Doe"
+ *                 createdAt: "2023-01-01T00:00:00.000Z"
+ *               accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *               refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *       400:
+ *         description: Bad request - Validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Validation failed"
+ *               details: [{"field": "email", "message": "Invalid email format"}]
+ *       409:
+ *         description: Conflict - User already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "User already exists with this email"
+ *       429:
+ *         description: Too many requests - Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Too many requests"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Internal server error"
+ */
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password, name } = registerSchema.parse(req.body);
@@ -90,6 +251,71 @@ export const register = async (req: Request, res: Response, next: NextFunction):
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/auth/login:
+ *   post:
+ *     summary: Login user
+ *     description: Authenticate user with email and password
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginRequest'
+ *           example:
+ *             email: "user@example.com"
+ *             password: "password123"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *             example:
+ *               message: "Login successful"
+ *               user:
+ *                 id: "123e4567-e89b-12d3-a456-426614174000"
+ *                 email: "user@example.com"
+ *                 name: "John Doe"
+ *               accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *               refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *       400:
+ *         description: Bad request - Validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Validation failed"
+ *               details: [{"field": "email", "message": "Invalid email format"}]
+ *       401:
+ *         description: Unauthorized - Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Invalid credentials"
+ *       429:
+ *         description: Too many requests - Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Too many requests"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Internal server error"
+ */
 export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password } = loginSchema.parse(req.body);
@@ -152,6 +378,58 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/auth/refresh:
+ *   post:
+ *     summary: Refresh access token
+ *     description: Generate new access and refresh tokens using a valid refresh token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RefreshTokenRequest'
+ *           example:
+ *             refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TokenResponse'
+ *             example:
+ *               message: "Token refreshed successfully"
+ *               accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *               refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *       400:
+ *         description: Bad request - Validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Validation failed"
+ *               details: [{"field": "refreshToken", "message": "Refresh token is required"}]
+ *       401:
+ *         description: Unauthorized - Invalid refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Invalid refresh token"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Internal server error"
+ */
 export const refreshToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { refreshToken } = refreshTokenSchema.parse(req.body);
@@ -219,6 +497,45 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/auth/logout:
+ *   post:
+ *     summary: Logout user
+ *     description: Invalidate user's refresh token and logout
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *             example:
+ *               message: "Logout successful"
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Access token required"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Internal server error"
+ */
 export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;

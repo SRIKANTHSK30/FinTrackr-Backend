@@ -4,6 +4,113 @@ import prisma from '@/config/database';
 import { AuthenticatedRequest } from '@/middleware/auth';
 import logger from '@/utils/logger';
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Category:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *           description: Unique category identifier
+ *         name:
+ *           type: string
+ *           description: Category name
+ *         type:
+ *           type: string
+ *           enum: [INCOME, EXPENSE]
+ *           description: Category type
+ *         color:
+ *           type: string
+ *           pattern: '^#[0-9A-F]{6}$'
+ *           description: Category color in hex format
+ *       example:
+ *         id: "123e4567-e89b-12d3-a456-426614174000"
+ *         name: "Food"
+ *         type: "EXPENSE"
+ *         color: "#3B82F6"
+ *     
+ *     CreateCategoryRequest:
+ *       type: object
+ *       required:
+ *         - name
+ *         - type
+ *       properties:
+ *         name:
+ *           type: string
+ *           minLength: 1
+ *           description: Category name
+ *           example: "Food"
+ *         type:
+ *           type: string
+ *           enum: [INCOME, EXPENSE]
+ *           description: Category type
+ *           example: "EXPENSE"
+ *         color:
+ *           type: string
+ *           pattern: '^#[0-9A-F]{6}$'
+ *           description: Category color in hex format
+ *           example: "#3B82F6"
+ *     
+ *     UpdateCategoryRequest:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *           minLength: 1
+ *           description: Category name
+ *           example: "Food & Dining"
+ *         type:
+ *           type: string
+ *           enum: [INCOME, EXPENSE]
+ *           description: Category type
+ *           example: "EXPENSE"
+ *         color:
+ *           type: string
+ *           pattern: '^#[0-9A-F]{6}$'
+ *           description: Category color in hex format
+ *           example: "#EF4444"
+ *     
+ *     CategoryStats:
+ *       type: object
+ *       properties:
+ *         category:
+ *           $ref: '#/components/schemas/Category'
+ *         stats:
+ *           type: object
+ *           properties:
+ *             totalAmount:
+ *               type: number
+ *               format: decimal
+ *               description: Total amount for this category
+ *             transactionCount:
+ *               type: number
+ *               description: Number of transactions in this category
+ *             averageAmount:
+ *               type: number
+ *               format: decimal
+ *               description: Average transaction amount for this category
+ *     
+ *     CategoryListResponse:
+ *       type: object
+ *       properties:
+ *         categories:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Category'
+ *     
+ *     CategoryResponse:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *           description: Success message
+ *         category:
+ *           $ref: '#/components/schemas/Category'
+ */
+
 const createCategorySchema = z.object({
   name: z.string().min(1),
   type: z.enum(['INCOME', 'EXPENSE']),
@@ -16,6 +123,73 @@ const updateCategorySchema = z.object({
   color: z.string().regex(/^#[0-9A-F]{6}$/i).optional()
 });
 
+/**
+ * @swagger
+ * /api/v1/categories:
+ *   post:
+ *     summary: Create a new category
+ *     description: Create a new income or expense category for the authenticated user
+ *     tags: [Categories]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateCategoryRequest'
+ *           example:
+ *             name: "Food"
+ *             type: "EXPENSE"
+ *             color: "#3B82F6"
+ *     responses:
+ *       201:
+ *         description: Category created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CategoryResponse'
+ *             example:
+ *               message: "Category created successfully"
+ *               category:
+ *                 id: "123e4567-e89b-12d3-a456-426614174000"
+ *                 name: "Food"
+ *                 type: "EXPENSE"
+ *                 color: "#3B82F6"
+ *       400:
+ *         description: Bad request - Validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Validation failed"
+ *               details: [{"field": "name", "message": "Name is required"}]
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Unauthorized"
+ *       409:
+ *         description: Conflict - Category already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Category already exists"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Internal server error"
+ */
 export const createCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.authUser!.id;
@@ -72,6 +246,57 @@ export const createCategory = async (req: AuthenticatedRequest, res: Response): 
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/categories:
+ *   get:
+ *     summary: Get all categories
+ *     description: Retrieve all categories for the authenticated user, optionally filtered by type
+ *     tags: [Categories]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [INCOME, EXPENSE]
+ *         description: Filter categories by type
+ *         example: "EXPENSE"
+ *     responses:
+ *       200:
+ *         description: Categories retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CategoryListResponse'
+ *             example:
+ *               categories:
+ *                 - id: "123e4567-e89b-12d3-a456-426614174000"
+ *                   name: "Food"
+ *                   type: "EXPENSE"
+ *                   color: "#3B82F6"
+ *                 - id: "123e4567-e89b-12d3-a456-426614174001"
+ *                   name: "Salary"
+ *                   type: "INCOME"
+ *                   color: "#10B981"
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Unauthorized"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Internal server error"
+ */
 export const getCategories = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.authUser!.id;
@@ -102,6 +327,65 @@ export const getCategories = async (req: AuthenticatedRequest, res: Response): P
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/categories/{id}:
+ *   get:
+ *     summary: Get category by ID
+ *     description: Retrieve a specific category by its ID for the authenticated user
+ *     tags: [Categories]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Category ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Category retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 category:
+ *                   $ref: '#/components/schemas/Category'
+ *             example:
+ *               category:
+ *                 id: "123e4567-e89b-12d3-a456-426614174000"
+ *                 name: "Food"
+ *                 type: "EXPENSE"
+ *                 color: "#3B82F6"
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Unauthorized"
+ *       404:
+ *         description: Category not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Category not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Internal server error"
+ */
 export const getCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.authUser!.id;
@@ -131,6 +415,90 @@ export const getCategory = async (req: AuthenticatedRequest, res: Response): Pro
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/categories/{id}:
+ *   put:
+ *     summary: Update category
+ *     description: Update an existing category for the authenticated user
+ *     tags: [Categories]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Category ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateCategoryRequest'
+ *           example:
+ *             name: "Food & Dining"
+ *             type: "EXPENSE"
+ *             color: "#EF4444"
+ *     responses:
+ *       200:
+ *         description: Category updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CategoryResponse'
+ *             example:
+ *               message: "Category updated successfully"
+ *               category:
+ *                 id: "123e4567-e89b-12d3-a456-426614174000"
+ *                 name: "Food & Dining"
+ *                 type: "EXPENSE"
+ *                 color: "#EF4444"
+ *       400:
+ *         description: Bad request - Validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Validation failed"
+ *               details: [{"field": "name", "message": "Name is required"}]
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Unauthorized"
+ *       404:
+ *         description: Category not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Category not found"
+ *       409:
+ *         description: Conflict - Category name already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Category name already exists"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Internal server error"
+ */
 export const updateCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.authUser!.id;
@@ -201,6 +569,76 @@ export const updateCategory = async (req: AuthenticatedRequest, res: Response): 
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/categories/{id}:
+ *   delete:
+ *     summary: Delete category
+ *     description: Delete a category for the authenticated user (only if not used in transactions)
+ *     tags: [Categories]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Category ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Category deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *             example:
+ *               message: "Category deleted successfully"
+ *       400:
+ *         description: Bad request - Category is being used in transactions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                 transactionCount:
+ *                   type: number
+ *             example:
+ *               error: "Cannot delete category that is being used in transactions"
+ *               transactionCount: 5
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Unauthorized"
+ *       404:
+ *         description: Category not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Category not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Internal server error"
+ */
 export const deleteCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.authUser!.id;
@@ -248,6 +686,66 @@ export const deleteCategory = async (req: AuthenticatedRequest, res: Response): 
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/categories/{id}/stats:
+ *   get:
+ *     summary: Get category statistics
+ *     description: Get detailed statistics for a specific category including total amount, transaction count, and average amount
+ *     tags: [Categories]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Category ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Category statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CategoryStats'
+ *             example:
+ *               category:
+ *                 id: "123e4567-e89b-12d3-a456-426614174000"
+ *                 name: "Food"
+ *                 type: "EXPENSE"
+ *                 color: "#3B82F6"
+ *               stats:
+ *                 totalAmount: 1250.50
+ *                 transactionCount: 15
+ *                 averageAmount: 83.37
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Unauthorized"
+ *       404:
+ *         description: Category not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Category not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               error: "Internal server error"
+ */
 export const getCategoryStats = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.authUser!.id;
