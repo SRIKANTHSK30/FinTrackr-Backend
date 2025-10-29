@@ -1,34 +1,32 @@
-# Stage: builder (has npm)
-FROM node:18-alpine AS builder
+# builder: install dev deps and build
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# copy lock + package for layer caching
+# copy lock + package for reproducible install
 COPY package*.json ./
 
-# Debug: confirm node/npm exist (remove after you verify)
-RUN node -v && npm -v
+# install all deps (dev + prod) so tsc is available for build
+RUN npm ci
 
-# Install production dependencies (npm ci requires package-lock.json)
-RUN if [ -f package-lock.json ]; then \
-      npm ci --only=production; \
-    else \
-      npm install --only=production; \
-    fi && npm cache clean --force
-
-# Copy app sources
+# copy sources and build
 COPY . .
+RUN npm run build
 
-# Optional build step (uncomment if your project builds)
-# RUN npm run build
-
-# Stage: runtime (smaller)
-FROM node:18-alpine AS runner
+# runtime: only production deps, skip scripts (we already built)
+FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copy app + deps from builder
-COPY --from=builder /app /app
+# copy package files so we can install production deps
+COPY package*.json ./
+
+# install only production deps and ignore lifecycle scripts (skip postinstall/build)
+RUN npm ci --only=production --ignore-scripts
+
+# copy built output and any runtime files
+COPY --from=builder /app/dist ./dist
+# copy other runtime assets (env, public, views, etc.) as needed
+# COPY --from=builder /app/public ./public
 
 EXPOSE 3000
-# Adjust to your actual start command / file
 CMD ["node", "dist/index.js"]
