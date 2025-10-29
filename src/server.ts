@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import session from 'express-session';
-import { env } from '@/config/env';
+import { env } from './config/env';
 import { generalLimiter } from '@/middleware/rateLimiter';
 import { errorHandler, notFoundHandler } from '@/middleware/errorHandler';
 import { setupSwagger } from '@/middleware/swagger';

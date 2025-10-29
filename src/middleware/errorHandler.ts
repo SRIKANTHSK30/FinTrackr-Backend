@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import logger from '@/utils/logger';
-import { env } from '@/config/env';
+import { env } from '../config/env';
 
 export interface AppError extends Error {
   statusCode?: number;
