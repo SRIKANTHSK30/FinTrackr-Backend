@@ -8,6 +8,9 @@ COPY package*.json ./
 # install all deps but don't run lifecycle scripts (prevents postinstall tsc running before sources exist)
 RUN npm ci --ignore-scripts
 
+# explicitly generate Prisma client before build
+RUN npx prisma generate
+
 # now copy source and run the build
 COPY . .
 RUN npm run build
