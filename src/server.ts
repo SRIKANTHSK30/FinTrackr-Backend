@@ -89,6 +89,16 @@ app.get('/', (_req, res) => {
   });
 });
 
+// Health check route (for Render)
+app.get('/api/v1/health', (_req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+
 // 404 handler
 app.use(notFoundHandler);
 
