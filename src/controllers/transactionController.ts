@@ -183,7 +183,7 @@ const createTransactionSchema = z.object({
   amount: z.number().positive(),
   category: z.string().min(1),
   description: z.string().optional(),
-  date: z.date().optional()
+  date: z.coerce.date().optional()
 });
 
 const updateTransactionSchema = z.object({
@@ -191,7 +191,7 @@ const updateTransactionSchema = z.object({
   amount: z.number().positive().optional(),
   category: z.string().min(1).optional(),
   description: z.string().optional(),
-  date: z.date().optional()
+  date: z.coerce.date().optional()
 });
 
 const getTransactionsSchema = z.object({
