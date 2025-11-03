@@ -201,6 +201,7 @@ const getTransactionsSchema = z.object({
   category: z.string().optional(),
   startDate: z.string().transform(Date).optional(),
   endDate: z.string().transform(Date).optional()
+  
 });
 
 /**
