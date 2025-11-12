@@ -80,3 +80,17 @@ enum CategoryType {
   INCOME
   EXPENSE
 }
+
+model Card {
+  id         Int      @id @default(autoincrement())
+  type       String
+  holder     String
+  number     String   @unique
+  expiry     String
+  balance    Decimal  @default(0.00)
+  status     String   @default("Active")
+  bank       String
+  gradient   String?
+  border     String?
+  created_at DateTime @default(now())
+}
