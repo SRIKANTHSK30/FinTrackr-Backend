@@ -1,5 +1,6 @@
 import { Router } from "express";
 import prisma from "@/utils/prisma";
+import logger from "@/utils/logger";
 
 const router = Router();
 
@@ -39,7 +40,7 @@ router.get("/", async (_req, res) => {
     });
     return res.json(cards);
   } catch (error) {
-    console.error("Error fetching cards:", error);
+    logger.error("Error fetching cards:", error);
     return res.status(500).json({ error: "Failed to fetch cards" });
   }
 });
@@ -90,7 +91,7 @@ router.get("/:id", async (req, res) => {
 
     return res.json(card);
   } catch (error) {
-    console.error("Error fetching card:", error);
+    logger.error("Error fetching card:", error);
     return res.status(500).json({ error: "Failed to fetch card" });
   }
 });
@@ -186,7 +187,7 @@ router.post("/", async (req, res) => {
 
     return res.status(201).json(newCard);
   } catch (error) {
-    console.error("Error creating card:", error);
+    logger.error("Error creating card:", error);
     return res.status(500).json({ error: "Failed to create card" });
   }
 });
@@ -252,7 +253,7 @@ router.put("/:id", async (req, res) => {
 
     return res.json(updatedCard);
   } catch (error) {
-    console.error("Error updating card:", error);
+    logger.error("Error updating card:", error);
     return res.status(500).json({ error: "Failed to update card" });
   }
 });
@@ -304,7 +305,7 @@ router.delete("/:id", async (req, res) => {
 
     return res.json({ message: "Card deleted successfully" });
   } catch (error) {
-    console.error("Error deleting card:", error);
+    logger.error("Error deleting card:", error);
     return res.status(500).json({ error: "Failed to delete card" });
   }
 });
